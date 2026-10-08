@@ -1,0 +1,17 @@
+services:
+  instareader:
+    build: .
+    container_name: instareader
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      IG_COOKIES: /cookies/cookies.txt
+    volumes:
+      - ./data:/data              # SQLite cache + Whisper model download (kept across rebuilds)
+      - ./cookies:/cookies:ro     # put cookies.txt here
+    ports:
+      - "127.0.0.1:8080:8080"     # localhost only; put a reverse proxy in front to expose it
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
