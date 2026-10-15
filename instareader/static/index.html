@@ -138,7 +138,15 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.95rem;ma
   // ---- start a job ----
   const looksLikeUrl = s => /^https?:\/\/\S+$/i.test(s.trim()) || /^(www\.)?(instagram|tiktok|youtube|youtu|x|twitter)\.\w+\//i.test(s.trim());
 
-  $("#url").addEventListener("paste", () => setTimeout(() => { if (looksLikeUrl($("#url").value)) start(); }, 0));
+  // A paste replaces whatever was in the box (no "link+link" mashups) and starts right away.
+  $("#url").addEventListener("paste", e => {
+    const text = (e.clipboardData || window.clipboardData)?.getData("text")?.trim();
+    if (!text) return;
+    e.preventDefault();
+    $("#url").value = text;
+    if (looksLikeUrl(text)) start();
+  });
+  $("#url").addEventListener("focus", () => $("#url").select());
   $("#goForm").addEventListener("submit", e => { e.preventDefault(); start(); });
 
   async function start(force = false, urlOverride) {
