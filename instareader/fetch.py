@@ -89,8 +89,6 @@ async def _yt_dlp(target: ParsedUrl, work: Path, s: Settings) -> Fetched:
         "yt-dlp",
         "--no-playlist",
         "--no-progress",
-        "--quiet",
-        "--no-warnings",
         "--restrict-filenames",
         "--socket-timeout", "30",
         "-f", "bv*[height<=720]+ba/b[height<=720]/bv*+ba/b",
@@ -111,6 +109,8 @@ async def _yt_dlp(target: ParsedUrl, work: Path, s: Settings) -> Fetched:
         raise _limit_error(s.max_video_seconds)
     videos = sorted(p for p in work.iterdir() if p.suffix.lower() in VIDEO_EXT)
     if res.returncode != 0 or not videos:
+        log.warning("yt-dlp rc=%s files=%s output: %s", res.returncode,
+                    [p.name for p in work.iterdir()], res.output.strip()[-1500:])
         err = classify(res.output)
         if err and err.code == "too_long":
             raise _limit_error(s.max_video_seconds)
@@ -134,7 +134,7 @@ async def _yt_dlp(target: ParsedUrl, work: Path, s: Settings) -> Fetched:
 async def _gallery_dl(target: ParsedUrl, work: Path, s: Settings) -> Fetched:
     out = work / "gdl"
     out.mkdir(exist_ok=True)
-    args = ["gallery-dl", "--quiet", "--write-metadata", "-D", str(out)]
+    args = ["gallery-dl", "--write-metadata", "-D", str(out)]
     if s.cookies_path:
         args += ["--cookies", str(s.cookies_path)]
     args.append(target.url)
@@ -147,6 +147,7 @@ async def _gallery_dl(target: ParsedUrl, work: Path, s: Settings) -> Fetched:
     videos = [p for p in files if p.suffix.lower() in VIDEO_EXT]
     images = [p for p in files if p.suffix.lower() in IMAGE_EXT]
     if not videos and not images:
+        log.warning("gallery-dl rc=%s output: %s", res.returncode, res.output.strip()[-1500:])
         err = classify(res.output)
         raise err or ReelError("download_failed", _tail(res.output))
 
