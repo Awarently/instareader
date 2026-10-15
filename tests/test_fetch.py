@@ -7,7 +7,8 @@ from instareader.fetch import _iso_date, classify
     ("ERROR: [Instagram] Dd6Z: Requested content is not available, rate-limit reached or login required. Use --cookies", "login_required"),
     ("ERROR: [Instagram] abc: This content may be inappropriate... login required", "login_required"),
     ("ERROR: [Instagram] abc: This account is private", "private"),
-    ("ERROR: Unsupported URL: https://example.com", "unsupported_url"),
+    ("ERROR: Unsupported URL: https://example.com", "download_failed"),
+    ("ERROR: Unsupported URL: https://www.facebook.com/login/?next=https%3A%2F%2Fwww.facebook.com%2Freel%2F1", "login_required"),
     ("[download] Dd6Z does not pass filter (!duration | duration<=600), skipping ..", "too_long"),
     ("[instagram][error] HttpError: '404 Not Found' for 'https://www.instagram.com/p/x/'", "private"),
 ])

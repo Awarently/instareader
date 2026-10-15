@@ -38,7 +38,11 @@ def classify(output: str) -> ReelError | None:
     if "does not pass filter" in low:
         return errors.too_long(None, 0)  # caller re-raises with the real limit
     if "unsupported url" in low:
-        return ReelError("unsupported_url", "The downloader doesn't support this link.")
+        # Logged-out requests often get redirected to a login/checkpoint page, which the
+        # downloader then reports as an "unsupported URL".
+        if "/login" in low or "checkpoint" in low or "login.php" in low:
+            return errors.login_required()
+        return ReelError("download_failed", _tail(output))
     if "private" in low and ("account" in low or "post" in low or "video" in low):
         return errors.private_post()
     if any(
@@ -175,7 +179,7 @@ async def fetch(target: ParsedUrl, work: Path, s: Settings) -> Fetched:
         return await _yt_dlp(target, work, s)
     except ReelError as first:
         # Final answers: don't hammer Instagram a second time with another tool.
-        if first.code in {"too_long", "timeout", "unsupported_url"}:
+        if first.code in {"too_long", "timeout"}:
             raise
         if not shutil.which("gallery-dl"):
             raise
