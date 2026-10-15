@@ -75,11 +75,6 @@ def _iso_date(v: object) -> str | None:
     return s[:10] if len(s) >= 10 and s[4] == "-" else None
 
 
-def duration_filter(limit: int) -> str:
-    """yt-dlp --match-filter: skip videos longer than `limit`; `?` lets posts with no duration through."""
-    return f"duration<=?{limit}"
-
-
 def _limit_error(limit: int, seconds: float | None = None) -> ReelError:
     return errors.too_long(seconds, limit)
 
@@ -93,7 +88,6 @@ async def _yt_dlp(target: ParsedUrl, work: Path, s: Settings) -> Fetched:
         "--socket-timeout", "30",
         "-f", "bv*[height<=720]+ba/b[height<=720]/bv*+ba/b",
         "--merge-output-format", "mp4",
-        "--match-filter", duration_filter(s.max_video_seconds),
         "--write-info-json",
         "-o", str(work / "media.%(ext)s"),
     ]

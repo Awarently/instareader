@@ -85,12 +85,18 @@ d=$(dirname "$out"); : > "$d/media.mp4"; echo '{info}' > "$d/media.info.json"
     assert (got.caption, got.creator, got.posted, got.duration) == ("cap #x", "creator1", "2026-10-01", 42)
 
 
-def test_duration_filter_is_valid_yt_dlp_syntax():
-    from yt_dlp.utils import match_filter_func
 
-    from instareader.fetch import duration_filter
-
-    fn = match_filter_func(duration_filter(600))
-    assert fn({"duration": 30}, incomplete=False) is None          # short: allowed
-    assert fn({}, incomplete=False) is None                        # unknown length: allowed
-    assert "does not pass filter" in fn({"duration": 700}, incomplete=False)  # too long: skipped
+def test_yt_dlp_does_not_prefilter_on_reported_duration(tmp_path, monkeypatch, settings):
+    """Sites (Facebook) sometimes report bogus durations; the real length is measured with ffprobe
+    after download, so yt-dlp must not skip videos based on the page's claim."""
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    argfile = tmp_path / "args"
+    _fake_bin(bindir, "yt-dlp", f'echo "$@" > {argfile}; exit 1\n')
+    _fake_bin(bindir, "gallery-dl", "exit 4\n")
+    _with_path(monkeypatch, bindir)
+    work = tmp_path / "w"
+    work.mkdir()
+    with pytest.raises(ReelError):
+        asyncio.run(fetch(parse("https://www.facebook.com/reel/1091834873764623"), work, settings))
+    assert "--match-filter" not in argfile.read_text()
