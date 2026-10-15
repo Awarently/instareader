@@ -72,6 +72,20 @@ SYSTEM = (
 )
 
 
+def _json_from_text(text: str) -> dict | None:
+    """First JSON object in free text (handles ```json fences and leading prose)."""
+    start = text.find("{")
+    while start != -1:
+        try:
+            obj, _ = json.JSONDecoder().raw_decode(text[start:])
+            if isinstance(obj, dict):
+                return obj
+        except ValueError:
+            pass
+        start = text.find("{", start + 1)
+    return None
+
+
 class ClaudeClient:
     def __init__(self, s: Settings, client: AsyncAnthropic | None = None):
         self.s = s
@@ -80,20 +94,29 @@ class ClaudeClient:
         self.client = client or AsyncAnthropic(api_key=s.anthropic_api_key, max_retries=3, timeout=180)
 
     async def _tool_call(self, tool: dict, content: list | str, max_tokens: int) -> dict:
+        # tool_choice "auto": some models reject forced tool use ("type tool/any not supported").
+        # The prompt asks for the tool; if the model answers in text instead, parse JSON from it.
         try:
             msg = await self.client.messages.create(
                 model=self.s.claude_model,
                 max_tokens=max_tokens,
-                system=SYSTEM,
+                system=SYSTEM + f" Always answer by calling the {tool['name']} tool exactly once.",
                 tools=[tool],
-                tool_choice={"type": "tool", "name": tool["name"]},
+                tool_choice={"type": "auto"},
                 messages=[{"role": "user", "content": content}],
             )
         except Exception as e:  # SDK raises several error types; surface one message
             raise ReelError("processing_failed", f"Claude API error: {e}") from e
+        text_parts = []
         for block in msg.content:
-            if getattr(block, "type", None) == "tool_use" and block.name == tool["name"]:
+            kind = getattr(block, "type", None)
+            if kind == "tool_use" and block.name == tool["name"]:
                 return dict(block.input)
+            if kind == "text":
+                text_parts.append(block.text)
+        parsed = _json_from_text("\n".join(text_parts))
+        if parsed is not None:
+            return parsed
         raise ReelError("processing_failed", "Claude returned no structured output.")
 
     async def read_frames(self, frames: list[Frame]) -> list[dict]:

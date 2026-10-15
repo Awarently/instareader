@@ -111,3 +111,23 @@ def test_merge_frames_tops_up_and_caps(tmp_path):
     assert [f.t for f in merged] == [0.0, 5.0, 7.0, 10.0, 15.0]
     many = [Frame(tmp_path / f"s{i}", float(i)) for i in range(30)]
     assert len(merge_frames(many, [], cap=12, min_scene=4)) == 12
+
+
+def test_claude_uses_auto_tool_choice_and_parses_text_fallback(settings):
+    from types import SimpleNamespace
+
+    from instareader.claude import ClaudeClient
+
+    calls = []
+
+    class TextOnly:
+        async def create(self, **kw):
+            calls.append(kw)
+            text = 'Here you go:\n```json\n{"title_guess": "T", "creator": "", "summary": ["s"], "claims": [], ' \
+                   '"tools_or_products_mentioned": [], "links_mentioned": [], "action_items": []}\n```'
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text=text)])
+
+    client = ClaudeClient(settings, client=SimpleNamespace(messages=TextOnly()))
+    out = asyncio.run(client.summarize(platform="instagram", creator="", caption="", transcript="", frame_notes=[]))
+    assert out["title_guess"] == "T" and out["summary"] == ["s"]
+    assert calls[0]["tool_choice"] == {"type": "auto"}
