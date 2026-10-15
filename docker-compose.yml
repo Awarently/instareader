@@ -11,9 +11,24 @@ services:
       - ./data:/data              # SQLite cache + Whisper model download (kept across rebuilds)
       - ./cookies:/cookies:ro     # put cookies.txt here
     ports:
-      # Open on the VPS's public IP so the web page works from your browser: http://<vps-ip>:8080
-      # Every API call needs HTTP_TOKEN. For localhost-only, change to "127.0.0.1:8080:8080".
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"     # for curl on the VPS itself; the public way in is Traefik below
+    networks:
+      - default
+      - traefik
+    labels:
+      # Served by the existing Traefik (the one in front of n8n) at https://$READER_HOST
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-root_default}
+      - traefik.http.routers.instareader.rule=Host(`${READER_HOST:-reels.srv1172913.hstgr.cloud}`)
+      - traefik.http.routers.instareader.entrypoints=websecure
+      - traefik.http.routers.instareader.tls=true
+      - traefik.http.routers.instareader.tls.certresolver=${TRAEFIK_CERTRESOLVER:-mytlschallenge}
+      - traefik.http.services.instareader.loadbalancer.server.port=8080
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
+
+networks:
+  traefik:
+    name: ${TRAEFIK_NETWORK:-root_default}
+    external: true
