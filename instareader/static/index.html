@@ -152,6 +152,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.95rem;ma
   async function start(force = false, urlOverride) {
     const url = (urlOverride || $("#url").value).trim();
     if (!url) { $("#url").focus(); return; }
+    if (url.includes(location.host)) {
+      renderError({ message: "That's this page's own address. The copy in the other app didn't reach the clipboard. Open the reel, copy its link again, and paste it here." });
+      return;
+    }
     stopTimers();
     $("#goBtn").disabled = true;
     renderWorking({ status: "queued" }, Date.now());
