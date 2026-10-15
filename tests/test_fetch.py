@@ -82,3 +82,14 @@ d=$(dirname "$out"); : > "$d/media.mp4"; echo '{info}' > "$d/media.info.json"
     got = asyncio.run(fetch(parse("https://www.instagram.com/reel/abc/"), work, settings))
     assert got.video.name == "media.mp4"
     assert (got.caption, got.creator, got.posted, got.duration) == ("cap #x", "creator1", "2026-10-01", 42)
+
+
+def test_duration_filter_is_valid_yt_dlp_syntax():
+    from yt_dlp.utils import match_filter_func
+
+    from instareader.fetch import duration_filter
+
+    fn = match_filter_func(duration_filter(600))
+    assert fn({"duration": 30}, incomplete=False) is None          # short: allowed
+    assert fn({}, incomplete=False) is None                        # unknown length: allowed
+    assert "does not pass filter" in fn({"duration": 700}, incomplete=False)  # too long: skipped
