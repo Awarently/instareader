@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Insta Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column; paste box on top, result card below, history list last */
+:root{
+  --bg:#f4f5f7; --surface:#fff; --fg:#17202c; --muted:#5e6878; --line:#dde1e7;
+  --accent:#c2366b; --accent-ink:#fff; --accent-soft:#fbe7ef;
+  --ok:#2c7a4b; --err:#b3261e; --err-soft:#fdecea;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#111419; --surface:#1a1f27; --fg:#e6e9ee; --muted:#9aa3b1; --line:#2b323d;
+  --accent:#ef6f9c; --accent-ink:#1a0d13; --accent-soft:#3a1c28;
+  --ok:#7ccf9a; --err:#f2958d; --err-soft:#3b1d1b; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--f-body)}
+.wrap{max-width:760px;margin:0 auto;padding:28px 16px 64px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:1.5rem;font-weight:700;letter-spacing:-.01em}
+h1 span{color:var(--accent)}
+.linkbtn{background:none;border:0;color:var(--muted);font:inherit;font-size:.85rem;cursor:pointer;text-decoration:underline;padding:0}
+form.go{display:flex;gap:8px;flex-wrap:wrap}
+form.go input{flex:1 1 280px;min-width:0;font:inherit;font-size:1.05rem;padding:14px 16px;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg)}
+form.go input:focus{outline:none;border-color:var(--accent)}
+button.primary{font:inherit;font-weight:600;font-size:1.05rem;padding:14px 22px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+button.primary:disabled{opacity:.55;cursor:default}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{color:var(--muted);font-size:.9rem;margin:-10px 0 0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.status{display:flex;align-items:center;gap:12px}
+.spinner{width:18px;height:18px;border-radius:50%;border:3px solid var(--accent-soft);border-top-color:var(--accent);animation:spin .9s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+.mono{font-family:var(--f-mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.error{background:var(--err-soft);border-color:transparent;color:var(--err)}
+.error b{display:block;margin-bottom:2px}
+.result h2{margin:0 0 4px;font-size:1.3rem;line-height:1.3;text-wrap:balance}
+.meta{color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:4px 10px}
+.meta a{color:var(--accent)}
+.badge{font-family:var(--f-mono);font-size:.72rem;padding:1px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.result section{margin-top:16px}
+.result h3{margin:0 0 6px;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.result ul{margin:0;padding-left:20px}
+.result li{margin:3px 0;overflow-wrap:anywhere}
+details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-weight:600;font-size:.95rem}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.95rem;margin:8px 0 0;color:var(--fg)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.actions button{font:inherit;font-size:.85rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.recent h3{margin:0 0 8px;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.recent ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.recent button{width:100%;text-align:left;background:none;border:0;padding:8px 10px;border-radius:8px;color:var(--fg);font:inherit;cursor:pointer;display:flex;justify-content:space-between;gap:12px}
+.recent button:hover{background:var(--surface)}
+.recent .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent .d{color:var(--muted);flex:none}
+.login{display:flex;flex-direction:column;gap:10px}
+.login input{font:inherit;padding:12px 14px;border:2px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Insta <span>Reader</span></h1>
+    <button class="linkbtn" id="logout" hidden>Change access code</button>
+  </header>
+
+  <div id="loginView" class="panel login" hidden>
+    <b>Enter your access code</b>
+    <span class="hint" style="margin:0">It's the <span class="mono">HTTP_TOKEN</span> value in the .env file on your VPS. This browser remembers it.</span>
+    <form id="loginForm" class="go">
+      <input id="code" type="password" autocomplete="current-password" placeholder="Access code" required>
+      <button class="primary" type="submit">Save</button>
+    </form>
+    <span id="loginMsg" class="hint" style="margin:0;color:var(--err)"></span>
+  </div>
+
+  <div id="mainView" hidden>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <form id="goForm" class="go" autocomplete="off">
+        <input id="url" type="url" inputmode="url" placeholder="Paste an Instagram reel link" aria-label="Reel link">
+        <button class="primary" id="goBtn" type="submit">Read</button>
+      </form>
+      <p class="hint">Paste the link and it starts on its own. Reels you've already read come back instantly.</p>
+      <div id="out"></div>
+      <div class="recent" id="recent"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); kids.forEach(k => k != null && n.append(k)); return n; };
+  let code = null, pollTimer = null, tickTimer = null;
+  try { code = localStorage.getItem("ir-code"); } catch (e) {}
+
+  function show(view) {
+    $("#loginView").hidden = view !== "login";
+    $("#mainView").hidden = view !== "main";
+    $("#logout").hidden = view !== "main";
+    if (view === "main") { $("#url").focus(); loadRecent(); }
+    else $("#code").focus();
+  }
+
+  async function api(path, opts = {}) {
+    const r = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", Authorization: "Bearer " + code } });
+    if (r.status === 401) { forget("That access code didn't work. Enter it again."); throw new Error("auth"); }
+    let body = {};
+    try { body = await r.json(); } catch (e) {}
+    return { ok: r.ok, status: r.status, body };
+  }
+
+  function forget(msg) {
+    code = null;
+    try { localStorage.removeItem("ir-code"); } catch (e) {}
+    $("#loginMsg").textContent = msg || "";
+    show("login");
+  }
+
+  $("#loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    code = $("#code").value.trim();
+    if (!code) return;
+    try { localStorage.setItem("ir-code", code); } catch (e) {}
+    $("#loginMsg").textContent = "";
+    try { const r = await api("/api/recent"); if (r.ok) show("main"); } catch (e) {}
+  });
+  $("#logout").addEventListener("click", () => forget(""));
+
+  // ---- start a job ----
+  const looksLikeUrl = s => /^https?:\/\/\S+$/i.test(s.trim()) || /^(www\.)?(instagram|tiktok|youtube|youtu|x|twitter)\.\w+\//i.test(s.trim());
+
+  $("#url").addEventListener("paste", () => setTimeout(() => { if (looksLikeUrl($("#url").value)) start(); }, 0));
+  $("#goForm").addEventListener("submit", e => { e.preventDefault(); start(); });
+
+  async function start(force = false, urlOverride) {
+    const url = (urlOverride || $("#url").value).trim();
+    if (!url) { $("#url").focus(); return; }
+    stopTimers();
+    $("#goBtn").disabled = true;
+    renderWorking({ status: "queued" }, Date.now());
+    try {
+      const r = await api("/api/jobs", { method: "POST", body: JSON.stringify({ url, force }) });
+      if (!r.ok || r.body.status === "error") { renderError(r.body); return; }
+      follow(r.body.id, r.body, Date.now());
+    } catch (e) {
+      if (e.message !== "auth") renderError({ message: "Couldn't reach the reader. Check that the service is running on the VPS." });
+    } finally { $("#goBtn").disabled = false; }
+  }
+
+  function follow(id, status, since) {
+    try { history.replaceState(null, "", "#" + id); } catch (e) {}
+    if (status.status === "done") { renderResult(status.result); loadRecent(); return; }
+    if (status.status === "error") { renderError(status); return; }
+    renderWorking(status, since);
+    pollTimer = setTimeout(async () => {
+      try {
+        const r = await api("/api/jobs/" + id);
+        if (r.ok) follow(id, r.body, since);
+        else renderError({ message: "Lost track of this job. Paste the link again." });
+      } catch (e) {
+        if (e.message !== "auth") pollTimer = setTimeout(() => follow(id, status, since), 5000);
+      }
+    }, 3000);
+  }
+
+  function stopTimers() { clearTimeout(pollTimer); clearInterval(tickTimer); }
+
+  // ---- rendering ----
+  function renderWorking(status, since) {
+    clearInterval(tickTimer);
+    const clock = el("span", { className: "mono" });
+    const tick = () => { const s = Math.floor((Date.now() - since) / 1000); clock.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+    tick(); tickTimer = setInterval(tick, 1000);
+    const what = status.status === "running"
+      ? "Downloading, transcribing and reading the video…"
+      : status.ahead ? `Waiting: ${status.ahead} ahead of this one…` : "Starting…";
+    $("#out").replaceChildren(el("div", { className: "panel status" },
+      el("div", { className: "spinner" }),
+      el("div", {}, el("div", { textContent: what }),
+        el("div", { className: "hint", style: "margin:0" }, "Usually 1–3 minutes. You can leave this page open. ", clock))));
+  }
+
+  function renderError(b) {
+    stopTimers();
+    const msg = b.message || "Something went wrong.";
+    $("#out").replaceChildren(el("div", { className: "panel error" },
+      el("b", { textContent: b.error === "login_required" ? "Instagram wants a login" : "Couldn't read that post" }),
+      el("span", { textContent: msg })));
+  }
+
+  const fmtDur = s => s ? Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0") : null;
+
+  function list(title, items) {
+    if (!items || !items.length) return null;
+    return el("section", {}, el("h3", { textContent: title }), el("ul", {}, ...items.map(t => el("li", { textContent: t }))));
+  }
+  function fold(title, text, open) {
+    if (!text) return null;
+    const d = el("details", {}, el("summary", { textContent: title }), el("pre", { textContent: text }));
+    d.open = !!open;
+    return d;
+  }
+
+  function renderResult(r) {
+    stopTimers();
+    const src = r.source || {};
+    const meta = el("div", { className: "meta" });
+    [r.creator, src.posted, fmtDur(src.duration)].filter(Boolean).forEach(t => meta.append(el("span", { textContent: t })));
+    if (src.url) meta.append(el("a", { href: src.url, target: "_blank", rel: "noopener", textContent: "Open post" }));
+    if (r.cached) meta.append(el("span", { className: "badge", textContent: "saved" }));
+
+    const asText = [
+      r.title_guess, src.url, "",
+      ...(r.summary || []).map(s => "• " + s),
+      ...(r.tools_or_products_mentioned?.length ? ["", "Tools: " + r.tools_or_products_mentioned.join(", ")] : []),
+      ...(r.action_items?.length ? ["", "Action items:", ...r.action_items.map(s => "• " + s)] : []),
+    ].join("\n");
+
+    const copyBtn = el("button", { type: "button", textContent: "Copy summary" });
+    copyBtn.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(asText); copyBtn.textContent = "Copied"; }
+      catch (e) { copyBtn.textContent = "Copy failed"; }
+      setTimeout(() => copyBtn.textContent = "Copy summary", 1500);
+    });
+    const redo = el("button", { type: "button", textContent: "Read again" });
+    redo.addEventListener("click", () => start(true, src.url));
+
+    $("#out").replaceChildren(el("article", { className: "panel result" },
+      el("h2", { textContent: r.title_guess || "Untitled" }), meta,
+      list("Summary", r.summary),
+      list("Tools & products", r.tools_or_products_mentioned),
+      list("Action items", r.action_items),
+      list("Links", r.links_mentioned),
+      list("Claims made", r.claims),
+      fold("Transcript", r.full_transcript || "(no speech)"),
+      fold("On-screen text", r.onscreen_text),
+      fold("Caption", src.caption),
+      el("div", { className: "actions" }, copyBtn, redo)));
+  }
+
+  async function loadRecent() {
+    try {
+      const r = await api("/api/recent");
+      if (!r.ok || !Array.isArray(r.body) || !r.body.length) { $("#recent").replaceChildren(); return; }
+      const ul = el("ul");
+      r.body.forEach(item => {
+        const b = el("button", { type: "button" },
+          el("span", { className: "t", textContent: item.title || item.url }),
+          el("span", { className: "d mono", textContent: (item.processed_at || "").slice(0, 10) }));
+        b.addEventListener("click", () => openSaved(item.id));
+        ul.append(el("li", {}, b));
+      });
+      $("#recent").replaceChildren(el("h3", { textContent: "Recently read" }), ul);
+    } catch (e) {}
+  }
+
+  async function openSaved(id) {
+    stopTimers();
+    try {
+      const r = await api("/api/jobs/" + id);
+      if (r.ok) follow(id, r.body, Date.now());
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {}
+  }
+
+  // ---- boot ----
+  if (!code) { show("login"); return; }
+  show("main");
+  const id = location.hash.slice(1);
+  if (/^[a-f0-9]{64}$/.test(id)) openSaved(id);
+})();
+</script>
+</body>
+</html>

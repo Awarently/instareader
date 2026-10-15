@@ -11,7 +11,9 @@ services:
       - ./data:/data              # SQLite cache + Whisper model download (kept across rebuilds)
       - ./cookies:/cookies:ro     # put cookies.txt here
     ports:
-      - "127.0.0.1:8080:8080"     # localhost only; put a reverse proxy in front to expose it
+      # Open on the VPS's public IP so the web page works from your browser: http://<vps-ip>:8080
+      # Every API call needs HTTP_TOKEN. For localhost-only, change to "127.0.0.1:8080:8080".
+      - "8080:8080"
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }

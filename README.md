@@ -2,10 +2,13 @@
 
 Self-hosted reader for Instagram reels and other short videos. Send it a link and get back the caption, the full transcript, any on-screen text, and a structured summary. It works with Instagram reels and posts (including image carousels), TikTok, YouTube Shorts, and X.
 
-You can use it two ways:
+You can use it three ways:
 
+- **Web page**: open `http://<vps-ip>:8080` in a browser and paste a link. Processing starts on its own and the summary shows on the page, along with a list of posts you've already read. The first visit asks for an access code, which is your `HTTP_TOKEN`. The browser remembers it.
 - **Telegram**: send the bot a link. It replies with the summary and attaches `transcript.txt`.
 - **HTTP**: `POST /read {"url": "..."}` with a bearer token. It returns JSON.
+
+The web page uses plain HTTP, so the access code travels unencrypted. That's acceptable for a personal tool. If you want HTTPS, put Caddy or nginx with a domain in front, and change the port in `docker-compose.yml` to `127.0.0.1:8080:8080`.
 
 ## How it works
 

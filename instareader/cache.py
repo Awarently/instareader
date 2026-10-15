@@ -33,6 +33,19 @@ class Cache:
             )
             self._db.commit()
 
+    def recent(self, limit: int = 30) -> list[dict]:
+        """Newest first: just what a history list needs."""
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT key, url, created_at, json FROM results ORDER BY created_at DESC LIMIT ?", (limit,)
+            ).fetchall()
+        out = []
+        for key, url, created, raw in rows:
+            r = json.loads(raw)
+            out.append({"id": key, "url": url, "processed_at": created,
+                        "title": r.get("title_guess") or "", "creator": r.get("creator") or ""})
+        return out
+
     def delete(self, key: str) -> None:
         with self._lock:
             self._db.execute("DELETE FROM results WHERE key = ?", (key,))

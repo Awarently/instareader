@@ -21,6 +21,9 @@ class JobQueue:
         self._queue: asyncio.Queue[tuple[ParsedUrl, asyncio.Future]] = asyncio.Queue()
         self._inflight: dict[str, asyncio.Future] = {}
         self._task: asyncio.Task | None = None
+        # Background jobs started from the web page, keyed by cache key. Bounded; oldest dropped.
+        self.jobs: dict[str, dict] = {}
+        self._bg: set[asyncio.Task] = set()
 
     def start(self) -> None:
         if self._task is None:
@@ -59,9 +62,53 @@ class JobQueue:
         result = await asyncio.shield(fut)
         return {**result, "cached": False}
 
+    def start_job(self, url: str, force: bool = False) -> tuple[str, dict]:
+        """Start processing without waiting. Returns (job id, status). Raises ReelError for bad URLs."""
+        target = parse(url)
+        key = target.cache_key
+        if not force:
+            hit = self.cache.get(key)
+            if hit is not None:
+                return key, self._set_job(key, {"status": "done", "url": target.url, "result": {**hit, "cached": True}})
+        current = self.jobs.get(key)
+        if current and current["status"] in {"queued", "running"}:
+            return key, current
+        status = self._set_job(key, {"status": "queued", "url": target.url, "ahead": self.pending})
+        task = asyncio.create_task(self._track(key, url, force))
+        self._bg.add(task)
+        task.add_done_callback(self._bg.discard)
+        return key, status
+
+    def job_status(self, key: str) -> dict | None:
+        if key in self.jobs:
+            return self.jobs[key]
+        hit = self.cache.get(key)
+        return {"status": "done", "url": hit["source"]["url"], "result": {**hit, "cached": True}} if hit else None
+
+    def _set_job(self, key: str, status: dict) -> dict:
+        self.jobs.pop(key, None)
+        self.jobs[key] = status
+        while len(self.jobs) > 200:
+            self.jobs.pop(next(iter(self.jobs)))
+        return status
+
+    async def _track(self, key: str, url: str, force: bool) -> None:
+        try:
+            result = await self.submit(url, force=force)
+            self._set_job(key, {"status": "done", "url": result["source"]["url"], "result": result})
+        except ReelError as e:
+            self._set_job(key, {"status": "error", "url": url, **e.to_dict()})
+        except Exception as e:  # keep the page informed rather than stuck on "running"
+            log.exception("background job failed")
+            self._set_job(key, {"status": "error", "url": url, "error": "processing_failed", "message": str(e)})
+
     async def _loop(self) -> None:
         while True:
             target, fut = await self._queue.get()
+            job = self.jobs.get(target.cache_key)
+            if job and job["status"] == "queued":
+                job["status"] = "running"
+                job.pop("ahead", None)
             try:
                 async with asyncio.timeout(self.s.job_timeout):
                     result = await self.pipeline.run(target)
