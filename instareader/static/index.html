@@ -85,7 +85,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.95rem;ma
   <div id="mainView" hidden>
     <div style="display:flex;flex-direction:column;gap:20px">
       <form id="goForm" class="go" autocomplete="off">
-        <input id="url" type="url" inputmode="url" placeholder="Paste an Instagram reel link" aria-label="Reel link">
+        <input id="url" type="url" inputmode="url" placeholder="Paste a reel link (Instagram, TikTok, YouTube, X, Facebook)" aria-label="Reel link">
         <button class="primary" id="goBtn" type="submit">Read</button>
       </form>
       <p class="hint">Paste the link and it starts on its own. Reels you've already read come back instantly.</p>
@@ -136,7 +136,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.95rem;ma
   $("#logout").addEventListener("click", () => forget(""));
 
   // ---- start a job ----
-  const looksLikeUrl = s => /^https?:\/\/\S+$/i.test(s.trim()) || /^(www\.)?(instagram|tiktok|youtube|youtu|x|twitter)\.\w+\//i.test(s.trim());
+  const looksLikeUrl = s => /^https?:\/\/\S+$/i.test(s.trim()) || /^(www\.)?(instagram|tiktok|youtube|youtu|x|twitter|facebook|fb)\.\w+\//i.test(s.trim());
 
   // A paste replaces whatever was in the box (no "link+link" mashups) and starts right away.
   $("#url").addEventListener("paste", e => {
@@ -201,7 +201,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.95rem;ma
     stopTimers();
     const msg = b.message || "Something went wrong.";
     $("#out").replaceChildren(el("div", { className: "panel error" },
-      el("b", { textContent: b.error === "login_required" ? "Instagram wants a login" : "Couldn't read that post" }),
+      el("b", { textContent: b.error === "login_required" ? "This post needs a login" : "Couldn't read that post" }),
       el("span", { textContent: msg })));
   }
 

@@ -15,6 +15,11 @@ from instareader.urls import find_url, parse
     ("https://youtu.be/abcDEF12345", "youtube", "abcDEF12345", "https://www.youtube.com/shorts/abcDEF12345"),
     ("https://www.youtube.com/watch?v=abcDEF12345&t=3", "youtube", "abcDEF12345", "https://www.youtube.com/shorts/abcDEF12345"),
     ("https://twitter.com/someone/status/1790000000000000000?s=20", "x", "1790000000000000000", "https://x.com/someone/status/1790000000000000000"),
+    ("https://www.facebook.com/reel/1234567890123456?mibextid=abc", "facebook", "1234567890123456", "https://www.facebook.com/reel/1234567890123456"),
+    ("https://m.facebook.com/somepage/videos/987654321/", "facebook", "987654321", "https://www.facebook.com/watch/?v=987654321"),
+    ("https://www.facebook.com/watch/?v=987654321&ref=sharing", "facebook", "987654321", "https://www.facebook.com/watch/?v=987654321"),
+    ("https://www.facebook.com/share/r/1AbCdEfGh/", "facebook", "s-1AbCdEfGh", "https://www.facebook.com/share/r/1AbCdEfGh/"),
+    ("https://fb.watch/abcD123xyz/", "facebook", "s-abcD123xyz", "https://fb.watch/abcD123xyz/"),
 ])
 def test_parse(url, platform, cid, canonical):
     p = parse(url)
@@ -33,6 +38,7 @@ def test_same_post_same_cache_key():
     "https://www.instagram.com/someuser/",
     "https://www.tiktok.com/@creator",
     "https://x.com/someone",
+    "https://www.facebook.com/somepage",
     "not a url",
     "",
 ])

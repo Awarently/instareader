@@ -36,7 +36,7 @@ RESULT_SCHEMA = {
             "required": ["url", "platform", "caption", "posted", "duration", "downloader", "language"],
             "properties": {
                 "url": {"type": "string"},
-                "platform": {"type": "string", "enum": ["instagram", "tiktok", "youtube", "x"]},
+                "platform": {"type": "string", "enum": ["instagram", "tiktok", "youtube", "x", "facebook"]},
                 "caption": {"type": "string"},
                 "posted": {"type": ["string", "null"]},
                 "duration": {"type": ["number", "null"]},

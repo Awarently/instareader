@@ -19,6 +19,7 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("tiktok", re.compile(r"^(?:www\.|m\.|vm\.|vt\.)?tiktok\.com$")),
     ("youtube", re.compile(r"^(?:www\.|m\.)?(?:youtube\.com|youtu\.be)$")),
     ("x", re.compile(r"^(?:www\.|mobile\.)?(?:x\.com|twitter\.com)$")),
+    ("facebook", re.compile(r"^(?:www\.|m\.|web\.)?(?:facebook\.com|fb\.watch)$")),
 ]
 
 _IG_PATH = re.compile(r"^/(?:[A-Za-z0-9_.]+/)?(reels?|p|tv)/([A-Za-z0-9_-]+)")
@@ -28,6 +29,11 @@ _YT_SHORTS = re.compile(r"^/shorts/([A-Za-z0-9_-]{6,})")
 _YT_WATCH_ID = re.compile(r"(?:^|&)v=([A-Za-z0-9_-]{6,})")
 _YTB = re.compile(r"^/([A-Za-z0-9_-]{6,})")
 _X_STATUS = re.compile(r"^/([^/]+)/status/(\d+)")
+_FB_REEL = re.compile(r"^/reel/(\d+)")
+_FB_VIDEOS = re.compile(r"^/[^/]+/videos/(?:[^/]+/)?(\d+)")
+_FB_SHARE = re.compile(r"^/share/(?:r|v)/([A-Za-z0-9_-]+)")
+_FB_WATCH_ID = re.compile(r"(?:^|&)v=(\d+)")
+_FBW = re.compile(r"^/([A-Za-z0-9_-]+)")
 
 
 @dataclass(frozen=True)
@@ -88,5 +94,18 @@ def parse(url: str) -> ParsedUrl:
         m = _X_STATUS.match(path)
         if m:
             return ParsedUrl("x", m.group(2), f"https://x.com/{m.group(1)}/status/{m.group(2)}")
+    elif platform == "facebook":
+        if host == "fb.watch":
+            m = _FBW.match(path)
+            if m:  # short link: downloader follows the redirect
+                return ParsedUrl("facebook", "s-" + m.group(1), f"https://fb.watch/{m.group(1)}/")
+        elif m := _FB_REEL.match(path):
+            return ParsedUrl("facebook", m.group(1), f"https://www.facebook.com/reel/{m.group(1)}")
+        elif m := _FB_VIDEOS.match(path):
+            return ParsedUrl("facebook", m.group(1), f"https://www.facebook.com/watch/?v={m.group(1)}")
+        elif path.rstrip("/") == "/watch" and (m := _FB_WATCH_ID.search(parts.query)):
+            return ParsedUrl("facebook", m.group(1), f"https://www.facebook.com/watch/?v={m.group(1)}")
+        elif m := _FB_SHARE.match(path):  # share link: downloader follows the redirect
+            return ParsedUrl("facebook", "s-" + m.group(1), f"https://www.facebook.com{path}")
 
     raise unsupported(url)

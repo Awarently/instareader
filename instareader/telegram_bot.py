@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 MAX_MSG = 4000  # Telegram limit is 4096
 
 HELP = (
-    "Send me an Instagram reel/post link (TikTok, YouTube Shorts and X links work too).\n"
+    "Send me an Instagram reel/post link (TikTok, YouTube, X and Facebook links work too).\n"
     "I reply with a summary and the full transcript as a text file.\n\n"
     "/force <link> reprocesses a link instead of using the saved result."
 )

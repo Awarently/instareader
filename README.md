@@ -1,6 +1,6 @@
 # instareader
 
-Self-hosted reader for Instagram reels and other short videos. Send it a link and get back the caption, the full transcript, any on-screen text, and a structured summary. It works with Instagram reels and posts (including image carousels), TikTok, YouTube Shorts, and X.
+Self-hosted reader for Instagram reels and other short videos. Send it a link and get back the caption, the full transcript, any on-screen text, and a structured summary. It works with Instagram reels and posts (including image carousels), TikTok, YouTube Shorts, X, and Facebook reels/videos.
 
 You can use it three ways:
 

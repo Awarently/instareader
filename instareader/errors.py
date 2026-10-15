@@ -30,15 +30,16 @@ class ReelError(Exception):
 def unsupported(url: str) -> ReelError:
     return ReelError(
         "unsupported_url",
-        f"Not a supported link: {url}. Send an Instagram reel/post, TikTok, YouTube Shorts or X post URL.",
+        f"Not a supported link: {url}. Send an Instagram reel/post, TikTok, YouTube, X or Facebook video URL.",
     )
 
 
 def login_required() -> ReelError:
     return ReelError(
         "login_required",
-        "Instagram wants a login for this post. The cookies file is missing or expired: "
-        "re-export cookies.txt from the scraping account and restart the service.",
+        "The site wants a login for this post. The cookies file is missing or expired: "
+        "export cookies.txt from a throwaway account on that site (Instagram, Facebook, ...), "
+        "put it in the cookies folder and restart the service.",
     )
 
 
