@@ -37,9 +37,26 @@ def _load_model(s: Settings):
         return _model
 
 
+def load_wav(wav: Path):
+    """16 kHz mono PCM16 WAV (what media.extract_audio writes) -> float32 numpy array in [-1, 1].
+
+    Passing samples instead of a path skips faster-whisper's PyAV decoder, which breaks on
+    newer PyAV releases ("open() got an unexpected keyword argument 'metadata_errors'")."""
+    import wave
+
+    import numpy as np
+
+    with wave.open(str(wav), "rb") as w:
+        if w.getsampwidth() != 2 or w.getnchannels() != 1 or w.getframerate() != 16000:
+            raise ReelError("processing_failed",
+                            f"Unexpected audio format: {w.getnchannels()}ch {w.getframerate()}Hz {8 * w.getsampwidth()}-bit")
+        frames = w.readframes(w.getnframes())
+    return np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
+
+
 def _local(wav: Path, s: Settings) -> Transcript:
     model = _load_model(s)
-    segments, info = model.transcribe(str(wav), vad_filter=True, beam_size=5)
+    segments, info = model.transcribe(load_wav(wav), vad_filter=True, beam_size=5)
     text = " ".join(seg.text.strip() for seg in segments).strip()
     return Transcript(text, info.language)
 
